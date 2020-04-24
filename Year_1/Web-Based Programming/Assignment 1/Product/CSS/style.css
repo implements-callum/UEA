@@ -1,0 +1,196 @@
+
+/* All webpages have the index.css linked to keep consistency through out the website. Also reduces repetitive code */
+/*
+  Colour Scheme:
+  #4F4114
+  #E8A454
+  #F8D5B2
+  #C9CDAD
+  #9DBAB0
+*/
+* { font-family: 'Roboto', sans-serif; padding: 0px; margin: 0px; }
+
+.first {
+  background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.2)), url("../Assets/Hotel.JPG") fixed no-repeat;
+  height: 100vh;
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+}
+
+body {
+  background-color: #a79dba;
+}
+
+.icon {
+  float: left;
+  margin-left: 3%;
+}
+
+.nav {
+  position: relative;
+  float: right;
+  padding: 5px 10px;
+  margin: 10px;
+  border: 1px solid #4F4144;
+  color: #4F4144;
+  border-radius: 8px;
+  transition: ease 0.6s;
+  display: inline;
+  right: 12.5%;
+  text-decoration: none;
+}
+
+.nav:hover {
+  border-color: #4F4144;
+  transition: ease 0.6s;
+  color: #4F4144;
+  background-color: #C9CDAD;
+}
+
+.fixed-nav #menu {
+  background-color: rgba(157, 186, 176, 1);
+}
+
+#menu {
+  list-style: none;
+  position: fixed;
+  padding: 0.2%;
+  padding-right: 20px;
+  text-align: center;
+  background-color: rgba(157, 186, 176, 0.8);
+  float: right;
+  width: 100%;
+  transition: 0.6s ease;
+}
+
+.btn {
+  border: 1px solid #4F4144;
+  background-color: #9DBAB0;
+  color: #4F4144;
+  border-radius: 5px;
+  padding: 5px 10px;
+  transition: ease 0.6s;
+}
+
+.btn:hover {
+  background-color: #C9CDAD;
+  transition: ease 0.6s;
+}
+
+.title {
+  position: absolute;
+  top: 40%;
+  left: 20%;
+  font-size: 60px;
+  color: white;
+}
+
+.desc {
+  width: 60%;
+  background-color: #9DBAB0;
+  border-left: solid 1px black;
+  border-right: solid 1px black;
+  padding: 3px 10px;
+  margin: 0 auto;
+}
+
+.feet {
+  background-color: #4F4144;
+  color: #9DBAB0;
+  text-align: center;
+  position: static;
+  padding: 5px 0px;
+  margin: 0px;
+  display: block;
+  width: 100%;
+  bottom: 0;
+}
+
+.iconMobile {
+  position: absolute;
+  visibility: hidden;
+  padding: 5px;
+  margin-left: 85%;
+  position: fixed;
+
+}
+
+/* This section mainly changes the nav bar into a hamburger menu to componsate for the width. */
+@media only screen and (max-width: 672px) {
+
+  .ham {
+    position: absolute;
+    display: inline-block;
+    cursor: pointer;
+    float: left;
+    padding: 10px 10px;
+    opacity: 1;
+    transition: ease 0.6s;
+    padding-bottom: 0px;
+    z-index: 1;
+    position: fixed;
+  }
+
+  .bar1, .bar2, .bar3
+  {
+    width: 35px;
+    height: 5px;
+    background-color: #ffff;
+    margin: 6px 0;
+    transition: 0.4s;
+    border-radius: 5px;
+  }
+
+  .change .bar1 {
+    -webkit-transform: rotate(-45deg) translate(-9px, 6px);
+    transform: rotate(-45deg) translate(-9px, 6px);
+    background-color: #EA593C;
+  }
+
+  .change .bar2 {
+    opacity: 0;
+    background-color: #EA593C;
+    -webkit-transform: translate(17.5px, 0);
+    width: 0px;
+  }
+
+  .change .bar3 {
+    -webkit-transform: rotate(45deg) translate(-8px, -8px);
+    transform: rotate(45deg) translate(-8px, -8px);
+    background-color: #EA593C;
+  }
+
+  .icon {
+    opacity: 0;
+  }
+  .menuView #menu {visibility: visible;}
+  .menuView .nav {opacity: 1;}
+
+  .nav {
+
+    opacity: 0;
+    width: 50%;
+    padding: 5px;
+    right: 0px;
+    z-index: 1;
+    transition: ease 0.6s;
+  }
+
+  #menu {
+    visibility: hidden;
+    z-index: 1;
+    right: 0px;
+    padding: 5px 0px;
+    text-align: center;
+    position: relative;
+    background-color: rgba(157, 186, 176, 1);
+    transition: 0.6s ease;
+    position: fixed;
+    transition: ease 0.6s;
+  }
+
+  .iconMobile { visibility: visible; }
+
+  .title { font-size: 30px; }
+}
