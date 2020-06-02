@@ -1,0 +1,407 @@
+Drop table LeadCustomer, Passenger, Flight, FlightBooking, SeatBooking;
+drop view customer_type, LeadCustomer_Public;
+drop view flight_info;
+drop table FlightBooking;
+
+SET datestyle='ISO, DMY';
+
+CREATE TABLE LeadCustomer 
+(
+	CustomerID INTEGER NOT NULL,
+	FirstName VARCHAR(20)  NOT NULL,
+	Surname VARCHAR(40)  NOT NULL,
+	BillingAddress VARCHAR(200)  NOT NULL,
+	email  VARCHAR(30) NOT NULL,
+	CONSTRAINT LeadCustomer_pk PRIMARY KEY(CustomerID) 
+);
+
+
+CREATE TABLE Passenger 
+(
+	PassengerID INTEGER NOT NULL,
+	FirstName VARCHAR(20)  NOT NULL,
+	Surname VARCHAR(40)  NOT NULL,
+	PassportNo VARCHAR(30) NOT NULL UNIQUE,
+	Nationality VARCHAR(30) NOT NULL,
+	Dob DATE NOT NULL,
+	CONSTRAINT Passenger_pk PRIMARY KEY(PassengerID)
+);
+
+
+CREATE TABLE Flight 
+(
+	FlightID INTEGER NOT NULL,
+	FlightDate TIMESTAMP NOT NULL, 
+	Origin VARCHAR(30) NOT NULL,
+	Destination VARCHAR(30) NOT NULL,
+	MaxCapacity INTEGER NOT NULL,
+	PricePerSeat DECIMAL NOT NULL,
+	CONSTRAINT Flight_pk PRIMARY KEY(FlightID)
+);
+
+
+CREATE TABLE FlightBooking 
+(
+	BookingID INTEGER NOT NULL,
+	CustomerID INTEGER NOT NULL CONSTRAINT FlightBooking_fkc REFERENCES LeadCustomer(CustomerID) ON DELETE CASCADE,
+	FlightID INTEGER NOT NULL CONSTRAINT FlightBooking_fkf REFERENCES Flight(FlightID) ON DELETE CASCADE, 
+	NumSeats INTEGER NOT NULL,
+	Status CHAR(1) NOT NULL,
+	BookingTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	TotalCost DECIMAL,
+	CONSTRAINT FlightBooking_pk PRIMARY KEY(BookingID)
+);
+
+
+CREATE TABLE SeatBooking
+(
+	BookingID INTEGER NOT NULL CONSTRAINT SeatBooking_fkb REFERENCES FlightBooking(BookingID) ON DELETE CASCADE,
+	PassengerID INTEGER NOT NULL CONSTRAINT SeatBooking_fkp REFERENCES Passenger(PassengerID) ON DELETE CASCADE,
+	SeatNumber CHAR(4) NOT NULL,
+	CONSTRAINT SeatBooking_pk PRIMARY KEY(SeatNumber, PassengerID)
+);
+
+-- VIEWS:
+
+-- LeadCustomer_Public is to allow staff to view necessary customer information yet keeping confidential data safe
+CREATE VIEW LeadCustomer_Public
+AS SELECT CustomerID, FirstName, SurName 
+FROM LeadCustomer;
+
+SELECT * FROM LeadCustomer_Public;
+
+CREATE OR REPLACE VIEW Customer_Type AS SELECT
+CONCAT('C: ', CustomerID) AS Client_ID, FirstName, SurName, 'Lead Customer' AS Customer_Type 
+FROM LeadCustomer UNION
+SELECT CONCAT('P: ', PassengerID) AS ID, FirstName, SurName, 'Passenger' AS Customer_Type
+FROM Passenger
+ORDER BY client_ID;
+
+SELECT * FROM Customer_Type;
+
+CREATE OR REPLACE VIEW Flight_Info AS SELECT
+p.FirstName, p.Surname, f.Origin,  f.Destination, fb.BookingTime, f.FlightDate,
+s.SeatNumber, fb.Status, s.BookingID, fb.CustomerID, f.FlightID
+FROM Passenger AS p
+INNER JOIN SeatBooking as s
+ON s.PassengerID = p.PassengerID 
+INNER JOIN FlightBooking AS fb
+ON fb.BookingID = s.BookingID
+INNER JOIN Flight AS f
+ON f.FlightID = fb.FlightID
+ORDER BY FlightDate;
+SELECT * FROM Flight_Info;
+
+
+-- INDEXES:
+
+CREATE INDEX destination_NYC
+ON Flight(Destination);
+SELECT COUNT(*) FROM Flight WHERE Destination = 'JFK Airport';
+
+CREATE INDEX first_Name ON
+LeadCustomer(FirstName);
+SELECT COUNT(*) FROM LeadCustomer WHERE FirstName = 'Dave';
+
+-- SEAT BOOKING
+INSERT INTO SeatBooking VALUES(10001, 40001, 36);
+
+INSERT INTO SeatBooking VALUES(10002, 40002, 12);
+INSERT INTO SeatBooking VALUES(10002, 40003, 13);
+INSERT INTO SeatBooking VALUES(10002, 40004, 14);
+
+INSERT INTO SeatBooking VALUES(10003, 40005, 81);
+INSERT INTO SeatBooking VALUES(10003, 40006, 82);
+
+INSERT INTO SeatBooking VALUES(10004, 40007, 20);
+
+INSERT INTO SeatBooking VALUES(10005, 40008, 25);
+INSERT INTO SeatBooking VALUES(10005, 40009, 26);
+INSERT INTO SeatBooking VALUES(10005, 40010, 27);
+INSERT INTO SeatBooking VALUES(10005, 40011, 28);
+SELECT * FROM SeatBooking;
+
+
+-- FLIGHT BOOKING
+INSERT INTO FlightBooking VALUES(10001, 20001, 30001, 1, 'c', '06/02/2020 18:47:31', 199.99);
+INSERT INTO FlightBooking VALUES(10002, 20002, 30002, 3, 'c', '10/11/2020 21:13:58', 299.97);
+INSERT INTO FlightBooking VALUES(10003, 20003, 30003, 2, 'r', '06/02/2020 01:38:02', 899.98);
+INSERT INTO FlightBooking VALUES(10004, 20004, 30004, 1, 'r', '12/05/2021 15:40:12', 299.99);
+INSERT INTO FlightBooking VALUES(10005, 20005, 30001, 4, 'r', '01/02/2021 22:55:44', 799.96);
+SELECT * FROM FlightBooking;
+
+
+-- 1a. LEAD CUSTOMER
+INSERT INTO LeadCustomer VAlUES(20001, 'Dave', 'Hunson', '55, Park Lane, Hamshire', 'dave@gmail.com');
+INSERT INTO LeadCustomer VAlUES(20002, 'John', 'Smith', '43, Kings Street, Norwich', 'johnsmith@gmail.com');
+INSERT INTO LeadCustomer VAlUES(20003, 'Kathy', 'Bron', '99, Mapel Avenue, London', 'terrywork@gmail.com');
+INSERT INTO LeadCustomer VAlUES(20004, 'Haru', 'Ito', '11, Navy Lane, Kings Lynn', 'Jameswork98@gmail.com');
+INSERT INTO LeadCustomer VAlUES(20005, 'Maya', 'Lorez', '01, Gondie Croft, Newcastle', 'mayaaa62@yahoo.ac.uk');
+SELECT * FROM LeadCustomer;
+
+
+-- 1b. FLIGHT
+INSERT INTO Flight VALUES(30001, '05/11/2022 12:30:00', 'Stansted', 'JFK Airport', 77, 199.99);
+INSERT INTO Flight VALUES(30002, '07/06/2021 06:15:00', 'Heathrow', 'Geneva Airport', 128, 99.99);
+INSERT INTO Flight VALUES(30003, '11/12/2022 22:00:00', 'Heathrow', 'Charles de Gaulle Airport', 128, 449.99);
+INSERT INTO Flight VALUES(30004, '11/12/2022 21:45:00', 'Heathrow', 'BCIA', 128, 299.99);
+SELECT * FROM Flight;
+
+
+-- 1c. PASSENGER
+INSERT INTO Passenger VALUES(40001, 'Dave', 'Hunson', '194862830', 'American', '19/03/1969');
+
+INSERT INTO Passenger VALUES(40002, 'John', 'Smith', '938274839', 'French', '11/03/1987');
+INSERT INTO Passenger VALUES(40003, 'Jake', 'Huep', '039472649', 'British', '06/09/2001');
+INSERT INTO Passenger VALUES(40004, 'Alex', 'Fiar', '037491057', 'British', '27/10/2000');
+
+INSERT INTO Passenger VALUES(40005, 'Kathy', 'Bron', '839401225', 'British', '11/11/1991');
+INSERT INTO Passenger VALUES(40006, 'Dave',  'Bron', '039475924', 'British', '15/02/1994');
+
+INSERT INTO Passenger VALUES(40007, 'Haru', 'Ito', '038510993', 'Japanese', '11/11/1981');
+
+INSERT INTO Passenger VALUES(40008, 'Maya', 'Lorez', '096638821', 'Spanish', '09/06/1976');
+INSERT INTO Passenger VALUES(40009, 'Miguel', 'Lorez', '007238205', 'Spanish', '02/08/2006');
+INSERT INTO Passenger VALUES(40010, 'Francisco', 'Lorez', '996341184', 'Spanish', '25/04/2001');
+INSERT INTO Passenger VALUES(40011, 'Antonio', 'Lorez', '834462068', 'Spanish', '02/08/1979');
+SELECT * FROM Passenger
+
+-- 2.
+
+-- 2.
+CREATE TRIGGER tr_Del_Customer
+BEFORE DELETE ON LeadCustomer
+FOR EACH ROW EXECUTE PROCEDURE delete_Customer();
+
+CREATE OR REPLACE FUNCTION delete_Customer()
+RETURNS TRIGGER AS 
+$BODY$
+  BEGIN
+    IF EXISTS (SELECT fb.CustomerID FROM FlightBooking AS fb WHERE fb.CustomerID = OLD.CustomerID AND fb.Status = 'R') THEN
+	  RAISE EXCEPTION 'CustomerID "%" is reserved.', OLD.CustomerID;
+	  ROLLBACK;
+	ELSE
+	  RETURN OLD;
+	END IF;
+  END;
+$BODY$ 
+LANGUAGE plpgsql;
+
+
+SELECT * FROM LeadCustomer;
+SELECT * FROM FlightBooking;
+SELECT * FROM SeatBooking;
+DELETE FROM LeadCustomer WHERE CustomerID = 20006;
+SELECT * FROM LeadCustomer;
+SELECT * FROM FlightBooking;
+SELECT * FROM SeatBooking;
+
+/* 3. Check the availability of seats on flights by showing the flight ID number, flight date
+along with the number of booked seats, number of available seats and maximum
+capacity. As a minimum you should be able check availability for all flights. Better
+solutions will be able to seach for a specific flight by flightID; by destination; or by
+date. Note that seats are booked (not available) as soon as the flight booking is
+entered and regardless of whether they have been associated with a particular
+passenger. */
+
+CREATE OR REPLACE FUNCTION checkAvailability(INTEGER) RETURNS 
+TABLE(flightID INTEGER, flightdate TIMESTAMP, maxcapacity INTEGER, available_seats BIGINT, booked_seats BIGINT) AS
+$$
+	SELECT f.FlightID, flightdate, maxcapacity, maxcapacity - SUM(numseats) 
+	AS available_seats, -(maxcapacity - SUM(numseats)) + maxcapacity AS booked_seats 
+	FROM Flight AS f
+	INNER JOIN flightBooking AS fb ON f.flightID = fb.flightID
+	WHERE f.flightID = $1 AND status = 'r'
+	GROUP BY f.flightID;
+$$
+LANGUAGE SQL;
+
+SELECT * FROM checkAvailability(30004);
+
+
+
+/* 4. Given a flight ID number, check the status of all seats currently allocated to that
+flight, i.e. return the total number of reserved/ cancelled/ available seats. */
+
+CREATE OR REPLACE FUNCTION seatInformation(INTEGER) RETURNS TABLE(flightID INTEGER, Status Char(1), maxCapacity INTEGER, numSeats bigint, available_Seats bigint) AS
+$$
+	SELECT f.flightID, fb.Status, f.MaxCapacity,
+	SUM(fb.NumSeats), MaxCapacity - SUM(fb.NumSeats) AS Available_Seats
+	FROM Flight f INNER JOIN FlightBooking fb
+	ON f.flightID = fb.flightID
+	WHERE f.flightID = $1
+	GROUP BY f.flightID, fb.Status;
+$$
+LANGUAGE SQL;
+SELECT * FROM SeatInformation(30001);
+
+/* 5. Produce a ranked list of all lead customers, showing their ID, their full name, the
+total number of bookings made and the total spend made for all bookings. The list
+should be sorted by decreasing total value. */
+
+SELECT fb.totalCost AS total_cost, lc.customerID, fb.numSeats, CONCAT(lc.FirstName, ' ', lc.SurName) AS full_name
+FROM LeadCustomer lc INNER JOIN FlightBooking fb
+ON lc.customerID = fb.customerID
+GROUP BY lc.customerID, fb.numSeats, fb.totalCost
+ORDER BY fb.totalCost DESC;
+
+
+/* 6. Create a new flight booking. This procedure can be broken down into a number of
+steps as follows:
+a. Provide a facility to search for existing customers (as a minimum by
+customerid but better solutions may provide other search options, e.g. by
+surname). If lead customer exists, we can use existing record. If new, we can
+enter in the database using query developed for 1a. */
+
+CREATE OR REPLACE FUNCTION cus_Search_Create(INTEGER, VARCHAR(20), VARCHAR(40), VARCHAR(200), VARCHAR(30)) 
+RETURNS TABLE
+(
+  CustomerID INTEGER, 
+  FirstName VARCHAR(20), 
+  Surname VARCHAR(40),
+	BillingAddress VARCHAR(200), 
+	email  VARCHAR(30)
+) AS $$
+  BEGIN
+    IF NOT EXISTS (SELECT LeadCustomer FROM LeadCustomer WHERE LeadCustomer.CustomerID = $1) THEN
+      INSERT INTO LeadCustomer VALUES($1, $2, $3, $4, $5);
+    END IF;
+    RETURN QUERY
+      SELECT lc.CustomerID, lc.FirstName, lc.Surname, lc.BillingAddress, lc.email 
+      FROM LeadCustomer AS lc WHERE lc.CustomerID = $1;
+  END;
+$$
+LANGUAGE plpgsql;
+
+SELECT * FROM cus_Search_Create(20006, 'Tom', 'Mann', '08, Lilac Street, Oxford', 'tomisawesome@gmail.com');
+SELECT * FROM LeadCustomer;
+
+/* b. Enter flight booking as requested, including total cost for the booking. The
+entering of a new booking should work as an atomic operation so either the
+whole booking (insert of lead customer if required, insert of flight booking
+itself) succeeds or it fails. Hence lead customers should not be added if the
+flight booking does not get added. If any problems occur during the booking
+(e.g. the seats are not available or any of the insert fails) the booking should
+be cancelled and all of the operations undone. */
+
+CREATE FUNCTION check_Seats (INTEGER)
+RETURNS INTEGER AS
+$$
+    BEGIN
+      RETURN (SELECT Available_Seats FROM checkAvailability($1));
+    END
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION update_FlightBooking(INTEGER, INTEGER, INTEGER, INTEGER, CHAR(1), TIMESTAMP, DECIMAL)
+RETURNS TABLE
+(
+  BookingID INTEGER, 
+  CustomerID INTEGER,
+	FlightID INTEGER, 
+	NumSeats INTEGER,
+	Status CHAR(1),
+	BookingTime TIMESTAMP,
+	TotalCost DECIMAL
+) AS $$
+  BEGIN
+  
+    IF NOT EXISTS (SELECT LeadCustomer FROM LeadCustomer WHERE LeadCustomer.CustomerID = $2) THEN
+	  RAISE EXCEPTION 'LeadCustomer with CustomerID "%" does not exist.', $2;
+      ROLLBACK;
+    END IF;
+	
+    IF NOT EXISTS (SELECT FlightBooking FROM FlightBooking WHERE FlightBooking.CustomerID = $2) THEN
+      INSERT INTO FlightBooking VAlUES($1, $2, $3, $4, $5, $6, $7);
+    ELSE
+      UPDATE FlightBooking AS fb
+      SET 
+        NumSeats = $4, 
+        TotalCost = $7
+      FROM FlightBooking
+      WHERE fb.CustomerID = $2;
+    END IF;
+    
+    
+    IF (check_Seats($3) < 0) THEN 
+	  RAISE EXCEPTION 'Exceeds maximum plane capacity by %.', -(check_Seats($3));
+      ROLLBACK; 
+    END IF;
+    
+    RETURN QUERY
+      SELECT fb.BookingID, fb.CustomerID, fb.FlightID, fb.NumSeats, fb.Status, fb.BookingTime, fb.TotalCost 
+      FROM FlightBooking AS fb WHERE fb.CustomerID = $2;
+  END;
+$$
+LANGUAGE plpgsql;
+
+SELECT * FROM update_FlightBooking(10006, 20006, 30001, 2, 'r', '01/02/2021 22:55:44', 799.96);
+
+SELECT * FROM FlightBooking;
+SELECT * FROM LeadCustomer;
+DELETE FROM LeadCustomer WHERE CustomerID = 20006;
+
+
+/* 7. Allocate seats to each passenger associated with a booking. Passengers need to be
+entered using the query developed in 1 c. There should be no more seat bookings
+that those associated with the flight booking, e.g. if the flight booking was for 3
+passengers only 3 seats should be allocated to 3 passengers. */
+
+DROP TRIGGER tr_Ins_Passenger ON SeatBooking CASCADE;
+
+CREATE TRIGGER tr_Ins_Passenger
+AFTER INSERT ON SeatBooking
+FOR EACH ROW EXECUTE PROCEDURE create_SeatBooking();
+
+CREATE OR REPLACE FUNCTION create_SeatBooking()
+RETURNS TRIGGER
+AS
+$BODY$
+  DECLARE
+  counter INTEGER := (SELECT COUNT(BookingID) FROM SeatBooking WHERE SeatBooking.BookingID = NEW.BookingID);
+  seats INTEGER := (SELECT NumSeats FROM FlightBooking WHERE FlightBooking.BookingID = NEW.BookingID);
+  BEGIN
+	IF (counter <= seats) THEN
+	  RETURN NEW;
+	ELSE
+	  RAISE EXCEPTION 'Customer orderered % seats, we counted % seats inserted.', seats, counter;
+	  ROLLBACK;
+	END IF;
+  END;
+$BODY$
+LANGUAGE plpgsql;
+
+SELECT * FROM FlightBooking;
+SELECT * FROM Passenger;
+SELECT * FROM SeatBooking;
+
+INSERT INTO Passenger VALUES(40015, 'TEST', 'TEST', '937495038', 'Spanish', '02/08/1979');
+INSERT INTO SeatBooking VALUES(10006, 40015, 8);
+
+DELETE FROM Passenger WHERE PassengerID = 40015;
+DELETE FROM SeatBooking WHERE PassengerID = 40015;
+
+
+
+/* 8. Given a booking ID number, cancel the booking. Note that cancelling a booking only
+changes the status and should not delete the historical details of the original
+booking. However, cancelled seats should be viewed as available. 
+*/
+
+CREATE OR REPLACE FUNCTION cancelBooking(INTEGER) RETURNS 
+TABLE(BookingID INTEGER, CustomerID INTEGER, FlightID INTEGER, NumSeats INTEGER, Status CHAR(1), BookingTime TIMESTAMP, TotalCost DECIMAL)
+AS $$
+  BEGIN
+  UPDATE FlightBooking SET Status = 'c' WHERE FlightBooking.BookingID = $1;
+  
+  RETURN QUERY
+    SELECT fb.BookingID, fb.CustomerID, fb.FlightID, fb.NumSeats, fb.Status, fb.BookingTime, fb.TotalCost 
+    FROM FlightBooking AS fb WHERE fb.BookingID = $1;
+  END;
+$$
+LANGUAGE plpgsql;
+
+SELECT * FROM FlightBooking;
+SELECT * FROM cancelBooking(10005);
+
+

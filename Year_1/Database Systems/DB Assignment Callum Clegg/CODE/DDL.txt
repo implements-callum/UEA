@@ -1,0 +1,142 @@
+SET datestyle='ISO, DMY';
+
+CREATE TABLE LeadCustomer 
+(
+	CustomerID INTEGER NOT NULL,
+	FirstName VARCHAR(20)  NOT NULL,
+	Surname VARCHAR(40)  NOT NULL,
+	BillingAddress VARCHAR(200)  NOT NULL,
+	email  VARCHAR(30) NOT NULL,
+	CONSTRAINT LeadCustomer_pk PRIMARY KEY(CustomerID) 
+);
+
+
+CREATE TABLE Passenger 
+(
+	PassengerID INTEGER NOT NULL,
+	FirstName VARCHAR(20)  NOT NULL,
+	Surname VARCHAR(40)  NOT NULL,
+	PassportNo VARCHAR(30) NOT NULL UNIQUE,
+	Nationality VARCHAR(30) NOT NULL,
+	Dob DATE NOT NULL,
+	CONSTRAINT Passenger_pk PRIMARY KEY(PassengerID)
+);
+
+
+CREATE TABLE Flight 
+(
+	FlightID INTEGER NOT NULL,
+	FlightDate TIMESTAMP NOT NULL, 
+	Origin VARCHAR(30) NOT NULL,
+	Destination VARCHAR(30) NOT NULL,
+	MaxCapacity INTEGER NOT NULL,
+	PricePerSeat DECIMAL NOT NULL,
+	CONSTRAINT Flight_pk PRIMARY KEY(FlightID),
+	CONSTRAINT valid_Flight CHECK(Origin != Destination)
+);
+
+CREATE TABLE FlightBooking 
+(
+	BookingID INTEGER NOT NULL,
+	CustomerID INTEGER NOT NULL CONSTRAINT FlightBooking_fkc REFERENCES LeadCustomer(CustomerID) ON DELETE CASCADE,
+	FlightID INTEGER NOT NULL CONSTRAINT FlightBooking_fkf REFERENCES Flight(FlightID) ON DELETE CASCADE, 
+	NumSeats INTEGER NOT NULL,
+	Status CHAR(1) NOT NULL,
+	BookingTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	TotalCost DECIMAL,
+	CONSTRAINT FlightBooking_pk PRIMARY KEY(BookingID)
+);
+
+
+CREATE TABLE SeatBooking
+(
+	BookingID INTEGER NOT NULL CONSTRAINT SeatBooking_fkb REFERENCES FlightBooking(BookingID) ON DELETE CASCADE,
+	PassengerID INTEGER NOT NULL CONSTRAINT SeatBooking_fkp REFERENCES Passenger(PassengerID) ON DELETE CASCADE,
+	SeatNumber CHAR(4) NOT NULL,
+	CONSTRAINT SeatBooking_pk PRIMARY KEY(SeatNumber, PassengerID)
+);
+
+-- VIEWS:
+
+-- LeadCustomer_Public is to allow staff to view necessary customer information yet keeping confidential data safe
+CREATE VIEW LeadCustomer_Public
+AS SELECT CustomerID, FirstName, SurName 
+FROM LeadCustomer;
+
+SELECT * FROM LeadCustomer_Public;
+
+CREATE OR REPLACE VIEW Customer_Type AS SELECT
+CONCAT('C: ', CustomerID) AS Client_ID, FirstName, SurName, 'Lead Customer' AS Customer_Type 
+FROM LeadCustomer UNION
+SELECT CONCAT('P: ', PassengerID) AS ID, FirstName, SurName, 'Passenger' AS Customer_Type
+FROM Passenger
+ORDER BY client_ID;
+
+SELECT * FROM Customer_Type;
+
+CREATE OR REPLACE VIEW Flight_Info AS SELECT
+p.FirstName, p.Surname, f.Origin,  f.Destination, fb.BookingTime, f.FlightDate,
+s.SeatNumber, fb.Status, s.BookingID, fb.CustomerID, f.FlightID
+FROM Passenger AS p
+INNER JOIN SeatBooking as s
+ON s.PassengerID = p.PassengerID 
+INNER JOIN FlightBooking AS fb
+ON fb.BookingID = s.BookingID
+INNER JOIN Flight AS f
+ON f.FlightID = fb.FlightID
+ORDER BY FlightDate;
+
+SELECT * FROM Flight_Info;
+
+-- INDEXES:
+
+CREATE INDEX destination_NYC
+ON Flight(Destination);
+SELECT COUNT(*) FROM Flight WHERE Destination = 'JFK Airport';
+
+CREATE INDEX first_Name ON
+LeadCustomer(FirstName);
+SELECT COUNT(*) FROM LeadCustomer WHERE FirstName = 'Dave';
+
+-- TRIGGERS:
+
+CREATE TRIGGER tr_Del_Customer
+BEFORE DELETE ON LeadCustomer
+FOR EACH ROW EXECUTE PROCEDURE delete_Customer();
+
+CREATE OR REPLACE FUNCTION delete_Customer()
+RETURNS TRIGGER AS 
+$BODY$
+  BEGIN
+    IF EXISTS (SELECT fb.CustomerID FROM FlightBooking AS fb WHERE fb.CustomerID = OLD.CustomerID AND fb.Status = 'R') THEN
+	  RAISE EXCEPTION 'CustomerID "%" is reserved.', OLD.CustomerID;
+	  ROLLBACK;
+	ELSE
+	  RETURN OLD;
+	END IF;
+  END;
+$BODY$ 
+LANGUAGE plpgsql;
+
+
+CREATE TRIGGER tr_Ins_Passenger
+AFTER INSERT ON SeatBooking
+FOR EACH ROW EXECUTE PROCEDURE create_SeatBooking();
+
+CREATE OR REPLACE FUNCTION create_SeatBooking()
+RETURNS TRIGGER
+AS
+$BODY$
+  DECLARE
+  counter INTEGER := (SELECT COUNT(BookingID) FROM SeatBooking WHERE SeatBooking.BookingID = NEW.BookingID);
+  seats INTEGER := (SELECT NumSeats FROM FlightBooking WHERE FlightBooking.BookingID = NEW.BookingID);
+  BEGIN
+	IF (counter <= seats) THEN
+	  RETURN NEW;
+	ELSE
+	  RAISE EXCEPTION 'Customer orderered % seats, we counted % seats inserted.', seats, counter;
+	  ROLLBACK;
+	END IF;
+  END;
+$BODY$
+LANGUAGE plpgsql;
