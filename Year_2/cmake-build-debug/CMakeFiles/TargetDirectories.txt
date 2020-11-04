@@ -1,3 +1,0 @@
-C:/Users/callu/Documents/UEA/Year_2/Programming 2/CLion/LABS/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-C:/Users/callu/Documents/UEA/Year_2/Programming 2/CLion/LABS/cmake-build-debug/CMakeFiles/LABS.dir
-C:/Users/callu/Documents/UEA/Year_2/Programming 2/CLion/LABS/cmake-build-debug/CMakeFiles/edit_cache.dir
